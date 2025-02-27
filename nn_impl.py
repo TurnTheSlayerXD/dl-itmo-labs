@@ -7,7 +7,8 @@ import numpy as np
 
 class nnImpl:
 
-    def __init__(self, layers: np.ndarray[nnLayer], in_dim: int, out_dim: int, epochs, speed):
+    def __init__(self, layers: np.ndarray[nnLayer], in_dim: int, out_dim: int, epochs: int, speed,
+                 loss_op):
         self.layers: np.ndarray[nnLayer] = layers
 
         self.epochs = epochs
@@ -15,68 +16,65 @@ class nnImpl:
         
         self.in_dim = in_dim
         self.out_dim = out_dim
+        
+        self.loss_op = np.vectorize(loss_op)
 
         pass
 
     def forward(self, x_mat: np.ndarray):
         for layer in self.layers:
-            x_mat = x_mat.transpose()
+            layer.X_mat = x_mat
+            layer.Y_mat = np.dot(layer.X_mat, layer.W_mat)
+            layer.Y_mat = np.add(layer.Y_mat, layer.B_vec)
+            layer.S_mat = layer.activ_op(layer.Y_mat)
+            x_mat = layer.S_mat 
 
-            layer.linear_out = np.dot(layer.weight_mat, x_mat).transpose()
-
-            np.add(layer.linear_out, layer.bias_vec, out=layer.linear_out)
-
-            layer.activ_out = layer.activ_op(layer.linear_out)
-
-            print(f'shape = {layer.activ_out.shape}')
-            x_mat = layer.activ_out 
-
-    def backward(self, y_mat: np.ndarray):
-        self.fix_last_layer(self.layers[-1], y_mat)
+    def count_grads(self, S_exp_mat: np.ndarray):
+        self.count_grad_last_layer(S_exp_mat)
         for i in range(len(self.layers) - 2, -1, -1):
-            self.fix_layer(self.layers[i], self.layers[i + 1])
-        pass
+            self.count_grad_two_layers(self.layers[i], self.layers[i + 1])
+            
+    def backward(self):
+        for layer in self.layers:
+            self.apply_gradient_descent(layer)
+    
+    def fit(self, x_mat: np.ndarray, y_exp: np.ndarray):
+        assert x_mat.shape[1] == self.in_dim
+        assert y_exp.shape[1] == self.out_dim
+        assert x_mat.shape[0] == y_exp.shape[0]
 
-    def make_dif(self, layer):
-        for i in range(layer.n_neurons):
-            delta_weight_vec = self.speed * layer.delta_vec[i] * layer.x_vec
+        for _ in range(self.epochs):
+            self.forward(x_mat)
+            self.count_grads(y_exp)
+            self.backward()
+        
+    def predict(self, x_mat: np.ndarray):
+        assert x_mat.shape[1] == self.in_dim
+        self.forward(x_mat)
+        return self.layers[-1].S_mat
 
-            delta_weight_vec += 10 ** -5
+    def count_grad_last_layer(self, S_exp_mat: np.ndarray):
+        
+        layer = self.layers[-1]
+    
+        prime_S_x_mat = layer.activ_prime_op(layer.Y_mat)
 
-            layer.weight_mat[i] -= delta_weight_vec
+        grad_L_y_mat = self.loss_op(layer.S_mat, S_exp_mat)
+        
+        layer.grad_L_x_mat = np.multiply(prime_S_x_mat, grad_L_y_mat)
 
-            delta_bias = self.speed * layer.delta_vec[i]
+        layer.grad_L_w_mat = np.dot(layer.X_mat.transpose(), layer.grad_L_x_mat)
+        
+    def count_grad_two_layers(self, cur_layer: nnLayer, next_layer: nnLayer):
 
-            delta_bias += 10 ** -5
+        buf = np.dot(next_layer.grad_L_x_mat, next_layer.W_mat.transpose())
+        
+        prime_S_x_mat = cur_layer.activ_prime_op(cur_layer.Y_mat)
 
-            layer.bias_vec[i] -= delta_bias
+        cur_layer.grad_L_x_mat = np.multiply(prime_S_x_mat, buf)
 
-        pass
-   
-    def fit_one(self, x_vec: np.ndarray, y_expected: np.ndarray):
-        self.forward(x_vec)
-        self.backward(y_expected)
+        cur_layer.grad_L_w_mat = np.dot(cur_layer.X_mat.transpose(), cur_layer.grad_L_x_mat)
 
-    def fit(self, x_mat: np.ndarray, y_expected: np.ndarray):
-        assert x_mat.shape[0] == y_expected.shape[0]
-        assert (x_mat.shape[1] == self.x_len)
-
-        if type(y_expected[0]) is not np.ndarray:
-            y_expected = [np.array([y for _ in range(self.layers[-1].n_neurons)])
-                          for y in y_expected]
-        else:
-            assert self.layers[-1].n_neurons == y_expected.shape[1]
-
-        for epoch in range(self.epochs):
-            # shuffle(x_mat)
-            for i in range(len(x_mat)):
-                self.fit_one(x_mat[i], y_expected[i])
-            if epoch % 100 == 0:
-                # print(f'Epoch: {epoch} : {self.layers[-1].weight_mat}')
-                pass
-        pass
-
-    def predict(self, x_vec):
-        self.forward(x_vec)
-
-        return self.layers[-1].y_vec
+    def apply_gradient_descent(self, layer: nnLayer):
+        layer.W_mat = np.subtract(layer.W_mat, np.dot(self.speed, layer.grad_L_w_mat)) 
+  

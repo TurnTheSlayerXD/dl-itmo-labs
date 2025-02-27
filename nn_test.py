@@ -9,19 +9,22 @@ from nn_builder import nnBuilder
 # proof of work
 def test():
 
-    builder = nnBuilder(in_dim=2, out_dim=1)
+    builder = nnBuilder(in_dim=2, out_dim=2, is_rand=True, epochs=1, speed=10 ** -5,
+                        loss_op=funs.min_sqr_loss_prime)
 
-    builder.add_layer(4)
-    builder.add_layer(1)
-    
+    builder.add_layer(2, activ_op=funs.softmax,
+                      activ_prime_op=funs.softmax_prime)
 
     net = builder.build()
 
-    x_ = np.array([[0, 1], [1, 2], [3, 4]])
-    y_ = np.array([[30.1], [-100], [100]])
+    x_ = np.array([[-1, 2], [2, 3], [-3, 4]])
+    y_ = np.array([[0, 1], [1, 0], [0, 1]])
 
-    net.forward(x_)
+    net.fit(x_, y_)
     
+    res = net.predict(np.array([[2, 3]]))
+
+    print(f'Prediction is {res}')
 
 
 if __name__ == '__main__':
