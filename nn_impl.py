@@ -17,7 +17,7 @@ class nnImpl:
         self.in_dim = in_dim
         self.out_dim = out_dim
         
-        self.loss_op = np.vectorize(loss_op)
+        self.loss_op = loss_op
 
         pass
 
