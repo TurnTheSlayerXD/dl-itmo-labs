@@ -9,6 +9,8 @@ class Node(ABC):
     q_dot = -1 / (2 * q ** 2)
     q_prime = 1 / q ** 2
 
+    EXP = 10 ** -5
+    
     def __init__(self, val: np.ndarray | np.float64, op_name: str = 'none',
                  lhs: 'Node' = None,
                  rhs: 'Node' = None):
@@ -22,10 +24,14 @@ class Node(ABC):
     def backward(self, grad: np.ndarray):
 
         if self.grad is None:
-            self.grad = np.zeros(grad.shape, dtype=np.float64)
+            self.grad = np.zeros(self.val.shape, dtype=np.float64)
 
-        self.grad += grad
-
+        buf = grad
+        if grad.shape != self.grad.shape:
+            buf = np.sum(grad, axis=0)
+        
+        self.grad += buf
+        
         if self.op_name == '__add__':
             self.lhs.backward(grad)
             self.rhs.backward(grad)
@@ -103,7 +109,7 @@ class Node(ABC):
             grad = np.broadcast_to(np.expand_dims(grad, (0, 1)), lhs.shape)
             res = grad * (lhs - rhs) * 2
             self.lhs.backward(res)
-            self.rhs.backward(-res)
+            self.rhs.backward(res)
         elif self.op_name == 'log_loss':
             lhs = self.lhs.val
             rhs = self.rhs.val
@@ -160,12 +166,13 @@ class Node(ABC):
                     name, self)
 
     def sigmoid(self) -> 'Node':
-        return Node(1 / (1 + np.exp(-self.val)), 'sigmoid', self)
+        return Node(1 / (1 + np.exp(-self.val + self.EXP)), 'sigmoid', self)
 
     def tanh(self) -> 'Node':
         EPS = 10 ** -10
         p_exp = np.exp(self.val)
         n_exp = 1 / (p_exp + EPS)
+        
         return Node((p_exp - n_exp) / (p_exp + n_exp), 'tanh', self)
 
     def log(self) -> 'Node':

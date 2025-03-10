@@ -1,3 +1,4 @@
+from numpy.random import random
 import torch
 from nn_grad import *
 
@@ -13,21 +14,6 @@ def gauss_T(lhs, rhs):
     return res
 
 
-def net(in_dim, out_dim):
-    from numpy.random import random
-
-    w_ = np.array(random(in_dim, 3))
-    b1 = random(3)
-
-    w2 = random(3, 5)
-    b2 = random(5)
-
-    w3 = random(5, out_dim)
-    b3 = random(out_dim)
-
-    
-
-    
 def main():
 
     x0 = random((6, 2))  # 6 x 2
@@ -41,16 +27,18 @@ def main():
 
     w1_n = Node(w1)
     w2_n = Node(w2)
-
+    b1_n = Node(b1)
+    b2_n = Node(b2)
+    
     t_n = Node(t)
 
     # z1 = x0_n.dot(w1_n) + b1
-    z1 = x0_n.gauss(w1_n)
+    z1 = x0_n.gauss(w1_n) + b1_n
 
     h = z1.sigmoid()
 
     # z2 = h.dot(w2_n) + b2
-    z2 = h.gauss(w2_n)
+    z2 = h.gauss(w2_n) + b2_n
 
     y = z2.sigmoid()
 
@@ -58,30 +46,32 @@ def main():
 
     error = res.minsqr_loss(t_n)
 
+    # error = res.minsqr_loss(t_n)
+
     error.backward(np.ones(error.shape))
-    print(f'h grad = {h.grad}')
-    print(f'z2 grad = {z2.grad}')
-    print(f'y grad = {y.grad}')
-    print(f'res = {res.grad}')
     print(f'error = {error}')
-    print("w1.grad =", w1_n.grad)
-    print("w2.grad =", w2_n.grad)
+    print("w1.grad =", repr(w1_n.grad))
+    print("w2.grad =", repr(w2_n.grad))
+    print("b1.grad =", repr(b1_n.grad))
+    print("b2.grad =", repr(b2_n.grad))
     print("=========================")
 
     x0_t = torch.tensor(x0, requires_grad=True)
     w1_t = torch.tensor(w1, requires_grad=True)
     w2_t = torch.tensor(w2, requires_grad=True)
+    b1_t = torch.tensor(b1, requires_grad=True)
+    b2_t = torch.tensor(b2, requires_grad=True)
 
     t_t = torch.tensor(t, requires_grad=True)
 
     # z1 = x0_t.matmul(w1_t) + torch.tensor(b1)
-    z1 = gauss_T(x0_t, w1_t)
+    z1 = gauss_T(x0_t, w1_t) + b1_t
 
     h = z1.sigmoid()
     h.retain_grad()
 
     # z2 = h.matmul(w2_t) +  torch.tensor(b2)
-    z2 = gauss_T(h, w2_t)
+    z2 = gauss_T(h, w2_t) + b2_t
     z2.retain_grad()
 
     y = z2.sigmoid()
@@ -93,17 +83,16 @@ def main():
     error = (res - t_t).square().sum(dim=1).sum(dim=0)
 
     error.backward(retain_graph=True, gradient=torch.ones(error.shape))
-    print(f'h grad = {h.grad}')
-    print(f'z2 grad = {z2.grad}')
-    print(f'y grad = {y.grad}')
-    print(f'res = {res.grad}')
     print(f'error = {error}')
     print("w1.grad =", w1_t.grad)
     print("w2.grad =", w2_t.grad)
-
+    print("b1.grad =", b1_t.grad)
+    print("b2.grad =", b2_t.grad)
     EPS = 10 ** -5
 
     assert np.all(np.abs(w1_t.grad.numpy() - w1_n.grad) < EPS)
+    assert np.all(np.abs(b1_t.grad.numpy() - b1_n.grad) < EPS)
+    assert np.all(np.abs(b2_t.grad.numpy() - b2_n.grad) < EPS)
 
 
 if __name__ == '__main__':

@@ -1,53 +1,51 @@
 import numpy as np
 
+from nn_layer import *
+
+from nn_impl import nnImpl
+
 
 def nnfix(arr: np.ndarray):
     isnan = np.isnan(arr)
     isinf = np.isinf(arr)
     isneginf = np.isneginf(arr)
-    
+
     arr[np.abs(arr) < 10 ** -5] = 0
     arr[arr > 10 ** 6] = 10 ** 6
     arr[arr < -10 ** 6] = -10 ** 6
-    
+
     arr[isnan] = 0
     arr[isinf] = 10 ** 6
     arr[isneginf] = -10 ** 6
-    
 
-class MinsqrLoss:
 
-    def __init__(self):
+class nnLoss(ABC):
+    def __init__(self, step=10 ** -4):
+        self.loss_: Node = None
+        self.step = step
 
-        def minsqr_loss_value(pred, true) -> np.float64:
-            return  np.mean(np.abs(pred - true) ** 2) 
+    @abstractmethod
+    def backward(self) -> float:
+        pass
 
-        def minsqr_loss_prime(pred, true) -> np.ndarray:
-            res = 2 * (pred - true)
-            return res
-            
-        self.loss_val = minsqr_loss_value
-        self.loss_prime = minsqr_loss_prime
-        
-        
-class LogLoss:
 
-    def __init__(self):
+class MinsqrLoss(nnLoss):
 
-        def log_loss_value(pred: np.ndarray, exp: np.ndarray) -> np.float64:
-            EPS = 10 ** -10
-            res = -(exp * np.log2(pred + EPS))
-            s = np.sum(res) / len(pred)
-            
-            return s
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        def log_loss_prime(pred: np.ndarray, exp: np.ndarray) -> np.ndarray:
-            EPS = 10 ** -10
-            ones = np.ones(shape=pred.shape)
-            res = exp / (pred + EPS)
-            # res = (pred - exp) / ((pred + EPS) * (ones - pred + EPS))
-            return res
+    def backward(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.minsqr_loss(true)
+        self.loss_.backward(np.ones(self.loss_.shape))
+        return self.loss_
 
-        self.loss_val = log_loss_value
-        self.loss_prime = log_loss_prime
-        
+
+class LogLoss(nnLoss):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def backward(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.log_loss(true)
+        self.loss_.backward(np.ones(self.loss_.shape))
+        return self.loss_

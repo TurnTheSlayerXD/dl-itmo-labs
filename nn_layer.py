@@ -1,10 +1,7 @@
 import numpy as np
 from abc import abstractmethod, ABC
-import nn_loss
 
-import nn_kernel
 
-from nn_loss import nnfix
 
 from nn_grad import *
 
@@ -12,15 +9,15 @@ from nn_grad import *
 @abstractmethod
 class nnLayer(ABC):
 
-    def __init__(self, in_dim: int, out_dim: int, with_bias=True,
+    def __init__(self, in_dim: int, out_dim: int, with_bias=False,
                  is_rand: bool = True, kernel=Node.dot):
         self.w_: Node = Node(np.random.rand(in_dim, out_dim)) \
             if is_rand \
             else Node(np.ones(shape=[in_dim, out_dim]))
 
-        self.b_: Node = Node(np.random.rand(1, out_dim)) \
+        self.b_: Node = Node(np.random.rand(out_dim)) \
             if is_rand \
-            else Node(np.zeros(shape=(1, out_dim)))
+            else Node(np.zeros(shape=out_dim))
 
         self.kernel = kernel
         self.in_dim = in_dim
@@ -114,3 +111,14 @@ class SoftargmaxLayer(nnLayer):
         super().forward_wout_bias(x_)
         self.y_ = self.y_.softargmax()
         return self.y_
+
+class LinearLayer(nnLayer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward_w_bias(self, x_: Node) -> Node:
+        return super().forward_w_bias(x_)
+
+    def forward_wout_bias(self, x_: Node) -> Node:
+        return super().forward_wout_bias(x_)
