@@ -20,7 +20,7 @@ class MinsqrLoss:
     def __init__(self):
 
         def minsqr_loss_value(pred, true) -> np.float64:
-            return  np.sum(np.abs(pred - true) ** 2) / len(pred)
+            return  np.mean(np.abs(pred - true) ** 2) 
 
         def minsqr_loss_prime(pred, true) -> np.ndarray:
             res = 2 * (pred - true)
@@ -36,12 +36,7 @@ class LogLoss:
 
         def log_loss_value(pred: np.ndarray, exp: np.ndarray) -> np.float64:
             EPS = 10 ** -10
-
-            ones = np.ones(shape=pred.shape)
-
-            res = -(exp * np.log2(pred + EPS) + (ones - exp) * np.log2(ones - pred + EPS))
-
-            # res = -(exp * np.log2(pred + EPS))
+            res = -(exp * np.log2(pred + EPS))
             s = np.sum(res) / len(pred)
             
             return s
@@ -49,7 +44,8 @@ class LogLoss:
         def log_loss_prime(pred: np.ndarray, exp: np.ndarray) -> np.ndarray:
             EPS = 10 ** -10
             ones = np.ones(shape=pred.shape)
-            res = (pred - exp) / ((pred + EPS) * (ones - pred + EPS))
+            res = exp / (pred + EPS)
+            # res = (pred - exp) / ((pred + EPS) * (ones - pred + EPS))
             return res
 
         self.loss_val = log_loss_value

@@ -14,22 +14,21 @@ def test():
     np.seterr(all='warn')
     
     layers = [ 
-              SigmoidLayer(3, 3, kernel=nn_kernel.GausKernel(q=1)),
+              TanhLayer(3, 3, kernel=nn_kernel.GausKernel(q=0.5)),
                 LinearLayer(3, 5, kernel=nn_kernel.GausKernel(q=1)),
-                SigmoidLayer(5, 3, kernel=nn_kernel.GausKernel(q=1)),
-                LinearLayer(3, 5, kernel=nn_kernel.GausKernel(q=1)),
-                SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.GausKernel(q=1))]
+                LinearLayer(5, 3, kernel=nn_kernel.GausKernel(q=1)),
+    ]
+                # SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.GausKernel(q=0.3))]
     
-    layers = [ 
-              SigmoidLayer(3, 3, kernel=nn_kernel.LinearKernel()),
-                LinearLayer(3, 5, kernel=nn_kernel.LinearKernel()),
-                SigmoidLayer(5, 3, kernel=nn_kernel.LinearKernel()),
-                LinearLayer(3, 5, kernel=nn_kernel.LinearKernel()),
-                SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.LinearKernel())]
+    # layers = [ 
+    #           TanhLayer(3, 3, kernel=nn_kernel.LinearKernel()),
+    #             LinearLayer(3, 5, kernel=nn_kernel.LinearKernel()),
+    #             LinearLayer(5, 3, kernel=nn_kernel.LinearKernel()), ]
+                # SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.LinearKernel())]
     
-    net = nnImpl(layers, epochs=10 ** 4, speed=10 ** -4)
+    net = nnImpl(layers, epochs=10 * 10 ** 4, speed=10 ** -5)
     
-    l = 10000
+    l = 10
     # ev = [ [n] for n in range(2, l, 2)]
     # y_ev = [[1, 0]] * len(ev)
     
@@ -44,7 +43,7 @@ def test():
     x_ = np.array([[rand(), rand(), rand() ] 
                    for _ in range(l)])
     
-    y_ = np.array([[1, 0, 0] if x[2] < 0.33 else [0, 1, 0] if x[2] < 0.66 else [0, 0, 1]
+    y_ = np.array([ x * 5
                    for x in x_])
 
     net.fit(x_, y_)
