@@ -2,12 +2,6 @@
 import numpy as np
 
 
-def softmax_op(y):
-    eye = np.eye(len(y), dtype=np.float64)
-    return (eye * y - np.outer(y, y))
-
-
-softmax_op_vec = np.vectorize(softmax_op)
 
 
 class Node:
@@ -22,7 +16,7 @@ class Node:
                  lhs: 'Node' = None,
                  rhs: 'Node' = None):
 
-        self.val = np.array(val)
+        self.val = val
         self.op_name = op_name
         self.lhs = lhs
         self.rhs = rhs
@@ -93,29 +87,14 @@ class Node:
             res[res >= 0] = 1
             self.lhs.backward(grad * res)
         elif self.op_name == 'softargmax':
+            # res = np.array([(eye * y - np.outer(y, y)) for y in y_])
+            # assert np.all(np.abs(new_res - res) < self.EPS)
             y_ = self.val
-
-            import time
-
-            # t1 = time.ctime()
-            # res = softmax_op_vec(y_)
-            # print(time.ctime() - t1)
-            
             eye = np.eye(y_.shape[1], dtype=np.float64)
-            
-            res = np.array([(eye * y - np.outer(y, y)) for y in y_])
-
-            lhs = np.expand_dims(y_, 1)
             new_shape = (y_.shape[0], y_.shape[1], y_.shape[1])
-            lhs = np.broadcast_to(lhs, new_shape)
-
-            new_res = eye * lhs - np.reshape(np.outer(y_, y_), new_shape)
-
-            assert new_res == res
-            
-            grad = np.expand_dims(grad, grad.ndim)
-            fin = np.broadcast_to(grad, res.shape) * res
-
+            y_t = np.broadcast_to(np.expand_dims(y_, 1), new_shape)
+            res = eye * y_t - np.einsum('ki,kj->kij', y_, y_)
+            fin = np.expand_dims(grad, grad.ndim) * res
             fin = np.sum(fin, axis=1)
 
             self.lhs.backward(fin)
@@ -144,7 +123,9 @@ class Node:
             grad = -np.broadcast_to(np.expand_dims(grad, (0, 1)), lhs.shape)
 
             self.lhs.backward(grad * rhs / lhs)
-            self.rhs.backward(grad / np.log(lhs))
+            self.rhs.backward(grad / (np.log(lhs) + self.EPS))
+            
+        
 
     def __add__(self, rhs) -> 'Node':
         if not isinstance(rhs, Node):
@@ -194,7 +175,7 @@ class Node:
                     name, self)
 
     def sigmoid(self) -> 'Node':
-        return Node(1 / (1 + np.exp(-self.val + self.EPS)), 'sigmoid', self)
+        return Node(1 / (1 + np.exp(-self.val)), 'sigmoid', self)
 
     def tanh(self) -> 'Node':
         EPS = 10 ** -10

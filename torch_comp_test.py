@@ -1,20 +1,21 @@
 from numpy.random import random
 import torch
-from nn_grad import *
+from nn_grad import Node
+
+import numpy as np
 
 
 def gauss_T(lhs: torch.Tensor, rhs: torch.Tensor):
-    q = 0.5
-    q_dot = -1 / (2 * q ** 2)
-    
 
     D_sq = torch.norm(torch.unsqueeze(lhs, 1) - rhs.T, dim=2) ** 2
-    res = (q_dot * D_sq).exp()
+    res = (Node.q_dot * D_sq).exp()
 
     return res
 
 
 def main():
+
+    EPS = Node.EPS
 
     x0 = random((6, 2))  # 6 x 2
     w1 = random((2, 3))  # 2 x 3
@@ -39,13 +40,20 @@ def main():
     grads_node = []
     for i in range(epochs):
         z1 = x0_n.gauss(w1_n)
+        # z1 = x0_n.dot(w1_n) + b1
         h = z1.sigmoid()
-        # z2 = h.dot(w2_n) + b2
+
+        print(f'h ={h}')
+
         z2 = h.gauss(w2_n)
+        # z2 = h.dot(w2_n) + b2
+
         y = z2.sigmoid()
+
         res = y.softargmax()
-        error = res.minsqr_loss(t_n)
+
         # error = res.minsqr_loss(t_n)
+        error = res.log_loss(t_n)
 
         error.backward(np.ones(error.shape))
 
@@ -79,7 +87,6 @@ def main():
 
         # z1 = x0_t.matmul(w1_t) + torch.tensor(b1)
         z1 = gauss_T(x0_t, w1_t)
-
         h = z1.sigmoid()
         h.retain_grad()
 
@@ -93,7 +100,7 @@ def main():
         res = y.softmax(1)
         res.retain_grad()
 
-        error = (res - t_t).square().sum(dim=1).sum(dim=0)
+        error = (-t_t * res.log()).sum(1).sum(0)
 
         error.backward(retain_graph=True, gradient=torch.ones(error.shape))
         print(f'error = {error}')
@@ -108,8 +115,6 @@ def main():
         w2_t = w2_t - w2_t.grad * step
         w2_t.retain_grad()
 
-    print("b1.grad =", b1_t.grad)
-    print("b2.grad =", b2_t.grad)
     EPS = 10 ** -5
 
     for i in range(len(grads_node)):

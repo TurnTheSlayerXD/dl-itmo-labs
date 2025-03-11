@@ -20,13 +20,16 @@ def nnfix(arr: np.ndarray):
 
 
 class nnLoss(ABC):
-    def __init__(self, step=10 ** -4):
+    def __init__(self):
         self.loss_: Node = None
-        self.step = step
 
     @abstractmethod
     def backward(self) -> float:
-        pass
+        raise NotImplemented
+
+    @abstractmethod
+    def count_loss(self, predicted: Node, true: Node) -> Node:
+        raise NotImplemented
 
 
 class MinsqrLoss(nnLoss):
@@ -39,13 +42,21 @@ class MinsqrLoss(nnLoss):
         self.loss_.backward(np.ones(self.loss_.shape))
         return self.loss_
 
+    def count_loss(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.minsqr_loss(true)
+        return self.loss_
+
 
 class LogLoss(nnLoss):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def backward(self, predicted: Node, true: Node) -> Node:
-        self.loss_ = predicted.log_loss(true)
+    def backward(self, predicted: Node, true) -> Node:
+        self.loss_ = predicted.log_loss(Node(true))
         self.loss_.backward(np.ones(self.loss_.shape))
+        return self.loss_
+
+    def count_loss(self, predicted: Node, true) -> Node:
+        self.loss_ = predicted.log_loss(true)
         return self.loss_

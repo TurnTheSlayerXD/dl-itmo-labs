@@ -2,15 +2,16 @@ import numpy as np
 from abc import abstractmethod, ABC
 
 
-
 from nn_grad import *
 
 
 @abstractmethod
 class nnLayer(ABC):
 
-    def __init__(self, in_dim: int, out_dim: int, with_bias=False,
-                 is_rand: bool = True, kernel=Node.gauss):
+    def __init__(self, in_dim: int, out_dim: int, with_bias: bool,
+                 is_rand: bool = True, kernel=Node.dot):
+        super().__init__()
+
         self.w_: Node = Node(np.random.rand(in_dim, out_dim)) \
             if is_rand \
             else Node(np.ones(shape=[in_dim, out_dim]))
@@ -24,7 +25,6 @@ class nnLayer(ABC):
         self.out_dim = out_dim
 
         self.forward = self.forward_w_bias if with_bias else self.forward_wout_bias
-        self.descent = self.descent_w_bias if with_bias else self.descent_wout_bias
 
         self.x_: Node = None
         self.y_: Node = None
@@ -40,17 +40,6 @@ class nnLayer(ABC):
         self.x_ = x_
         self.y_ = self.kernel(x_, self.w_)
         return self.y_
-
-    def descent_w_bias(self, step):
-        self.w_.val -= step * self.w_.grad
-        self.b_.val -= step * self.b_.grad
-        
-        self.w_.grad = None
-        self.b_.grad = None
-
-    def descent_wout_bias(self, step):
-        self.w_.val -= step * self.w_.grad
-        self.w_.grad = None
 
 
 class SigmoidLayer(nnLayer):
@@ -115,6 +104,7 @@ class SoftargmaxLayer(nnLayer):
         super().forward_wout_bias(x_)
         self.y_ = self.y_.softargmax()
         return self.y_
+
 
 class LinearLayer(nnLayer):
 
