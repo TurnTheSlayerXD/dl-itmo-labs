@@ -10,7 +10,7 @@ from nn_grad import *
 class nnLayer(ABC):
 
     def __init__(self, in_dim: int, out_dim: int, with_bias=False,
-                 is_rand: bool = True, kernel=Node.dot):
+                 is_rand: bool = True, kernel=Node.gauss):
         self.w_: Node = Node(np.random.rand(in_dim, out_dim)) \
             if is_rand \
             else Node(np.ones(shape=[in_dim, out_dim]))
@@ -44,9 +44,13 @@ class nnLayer(ABC):
     def descent_w_bias(self, step):
         self.w_.val -= step * self.w_.grad
         self.b_.val -= step * self.b_.grad
+        
+        self.w_.grad = None
+        self.b_.grad = None
 
     def descent_wout_bias(self, step):
-        self.w_ -= step * self.w_.grad
+        self.w_.val -= step * self.w_.grad
+        self.w_.grad = None
 
 
 class SigmoidLayer(nnLayer):

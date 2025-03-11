@@ -16,21 +16,21 @@ def test():
 
     np.seterr(all='raise')
 
-    n = 100
+    n = 1000
 
     from numpy.random import rand
 
     x_ = np.array([[rand(), rand(), rand()] for _ in range(n)])
 
-    true = np.array([x * 5 for x in x_])
+    true = np.array([[1, 0, 0] if x[2] < 0.33 else [0, 1, 0]
+                    if x[2] < 0.66 else [0, 0, 1] for x in x_])
 
-
-    net = nnImpl(3, 3, step=10**-12)
+    net = nnImpl(3, 3, step=10**-4)
 
     indxs = list(range(0, n))
-    epochs = 10 ** 5
+    epochs = 10 ** 3 * 4
 
-    loss = MinsqrLoss()
+    loss = LogLoss()
 
     for epoch in range(1, epochs + 1):
         pred = net.forward(Node(x_))
@@ -44,21 +44,11 @@ def test():
             x_ = x_[indxs]
             true = true[indxs]
 
-    # ev = [ [n] for n in range(2, l, 2)]
-    # y_ev = [[1, 0]] * len(ev)
 
-    # odd = [ [n] for n in range(1, l, 2)]
-    # y_odd = [[0, 1]] * len(odd)
-
-    # x_ = ev + odd
-    # y_ = y_ev + y_odd
-
-   
     res = net.forward(Node(np.array([[0.1, 0.2, 0.3]])))
 
     best = res.val.argmax(axis=1)
     print(f'Prediction is {res}, best={best}')
-
 
 
 if __name__ == '__main__':

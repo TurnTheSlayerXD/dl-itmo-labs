@@ -1,16 +1,23 @@
 
 import numpy as np
-from abc import abstractmethod, ABC
 
 
-class Node(ABC):
+def softmax_op(y):
+    eye = np.eye(len(y), dtype=np.float64)
+    return (eye * y - np.outer(y, y))
 
-    q = 0.5
+
+softmax_op_vec = np.vectorize(softmax_op)
+
+
+class Node:
+
+    q = 0.6
     q_dot = -1 / (2 * q ** 2)
     q_prime = 1 / q ** 2
 
-    EXP = 10 ** -5
-    
+    EPS = 10 ** -5
+
     def __init__(self, val: np.ndarray | np.float64, op_name: str = 'none',
                  lhs: 'Node' = None,
                  rhs: 'Node' = None):
@@ -29,9 +36,9 @@ class Node(ABC):
         buf = grad
         if grad.shape != self.grad.shape:
             buf = np.sum(grad, axis=0)
-        
+
         self.grad += buf
-        
+
         if self.op_name == '__add__':
             self.lhs.backward(grad)
             self.rhs.backward(grad)
@@ -87,19 +94,40 @@ class Node(ABC):
             self.lhs.backward(grad * res)
         elif self.op_name == 'softargmax':
             y_ = self.val
+
+            import time
+
+            # t1 = time.ctime()
+            # res = softmax_op_vec(y_)
+            # print(time.ctime() - t1)
+            
             eye = np.eye(y_.shape[1], dtype=np.float64)
+            
             res = np.array([(eye * y - np.outer(y, y)) for y in y_])
+
+            lhs = np.expand_dims(y_, 1)
+            new_shape = (y_.shape[0], y_.shape[1], y_.shape[1])
+            lhs = np.broadcast_to(lhs, new_shape)
+
+            new_res = eye * lhs - np.reshape(np.outer(y_, y_), new_shape)
+
+            assert new_res == res
+            
             grad = np.expand_dims(grad, grad.ndim)
             fin = np.broadcast_to(grad, res.shape) * res
+
             fin = np.sum(fin, axis=1)
+
             self.lhs.backward(fin)
         elif self.op_name == 'gauss':
             y_ = self.val
             x_ = self.lhs.val
             w_ = self.rhs.val
+
             diff = np.expand_dims(x_, 1) - w_.T
             res = np.expand_dims(y_, 2) * diff * self.q_prime
             fin = np.expand_dims(grad, 2) * res
+
             self.lhs.backward(-np.sum(fin, 1))
             self.rhs.backward(np.sum(fin, 0).T)
 
@@ -109,7 +137,7 @@ class Node(ABC):
             grad = np.broadcast_to(np.expand_dims(grad, (0, 1)), lhs.shape)
             res = grad * (lhs - rhs) * 2
             self.lhs.backward(res)
-            self.rhs.backward(res)
+            self.rhs.backward(-res)
         elif self.op_name == 'log_loss':
             lhs = self.lhs.val
             rhs = self.rhs.val
@@ -166,13 +194,13 @@ class Node(ABC):
                     name, self)
 
     def sigmoid(self) -> 'Node':
-        return Node(1 / (1 + np.exp(-self.val + self.EXP)), 'sigmoid', self)
+        return Node(1 / (1 + np.exp(-self.val + self.EPS)), 'sigmoid', self)
 
     def tanh(self) -> 'Node':
         EPS = 10 ** -10
         p_exp = np.exp(self.val)
         n_exp = 1 / (p_exp + EPS)
-        
+
         return Node((p_exp - n_exp) / (p_exp + n_exp), 'tanh', self)
 
     def log(self) -> 'Node':
@@ -194,11 +222,16 @@ class Node(ABC):
     def gauss(self, rhs) -> 'Node':
         if not isinstance(rhs, Node):
             rhs = Node(rhs)
-        D_sq = np.sum(np.square(self.val), axis=1, keepdims=True) \
-            + np.sum(np.square(rhs.val), axis=0) \
-            - 2 * np.dot(self.val, rhs.val)
-        res = np.exp(self.q_dot * D_sq)
+        D_sq = np.square(np.linalg.norm(
+            np.expand_dims(self.val, 1) - rhs.val.T, axis=2))
 
+        # D_sq_old = np.sum(self.val ** 2, axis=1, keepdims=True)  \
+        #     + np.sum(rhs.val ** 2, axis=0) \
+        #     - 2 * self.val @ rhs.val
+
+        # assert np.all(np.abs(D_sq - D_sq_old) < self.EPS)
+
+        res = np.exp(self.q_dot * D_sq)
         return Node(res, 'gauss', self, rhs)
 
     def log_loss(self, true) -> 'Node':
@@ -211,7 +244,7 @@ class Node(ABC):
     def minsqr_loss(self, true) -> 'Node':
         if not isinstance(true, Node):
             true = Node(true)
-        res = np.sum(np.sum((self.val - true.val) ** 2, axis=1),
+        res = np.sum(np.sum(np.square(self.val - true.val), axis=1),
                      axis=0)
         return Node(res, 'minsqr_loss', self, true)
 
