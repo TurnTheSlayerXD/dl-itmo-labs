@@ -85,8 +85,6 @@ class Node:
             res[res >= 0] = 1
             self.lhs.backward(grad * res)
         elif self.op_name == 'softargmax':
-            # res = np.array([(eye * y - np.outer(y, y)) for y in y_])
-            # assert np.all(np.abs(new_res - res) < self.EPS)
             y_ = self.val
             eye = np.eye(y_.shape[1], dtype=np.float64)
             new_shape = (y_.shape[0], y_.shape[1], y_.shape[1])
@@ -127,11 +125,11 @@ class Node:
             x_ = self.lhs.val
             y_ = self.rhs.val
 
-            s_ = np.exp(
+            norms = np.exp(
                 x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
 
-            self.lhs.backward(grad * (s_ - y_))
-            self.rhs.backward(-grad * np.log(s_))
+            self.lhs.backward(grad * (norms - y_))
+            self.rhs.backward(-grad * np.log(norms))
 
             return
 
@@ -204,29 +202,22 @@ class Node:
 
     def softargmax(self) -> 'Node':
         x_ = self.val
-        logits = np.exp(x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
+        norms = np.exp(x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
 
-        return Node(logits, 'softargmax', self)
+        return Node(norms, 'softargmax', self)
 
     def gauss(self, rhs) -> 'Node':
         if not isinstance(rhs, Node):
             rhs = Node(rhs)
         D_sq = np.square(np.linalg.norm(
             np.expand_dims(self.val, 1) - rhs.val.T, axis=2))
-
-        # D_sq_old = np.sum(self.val ** 2, axis=1, keepdims=True)  \
-        #     + np.sum(rhs.val ** 2, axis=0) \
-        #     - 2 * self.val @ rhs.val
-
-        # assert np.all(np.abs(D_sq - D_sq_old) < self.EPS)
-
         res = np.exp(self.q_dot * D_sq)
         return Node(res, 'gauss', self, rhs)
 
     def log_loss(self, true) -> 'Node':
         if not isinstance(true, Node):
             true = Node(true)
-        res = -np.sum(np.sum((true.val * np.log(self.val)), axis=1),
+        res = -np.sum(np.sum(true.val * np.log(self.val), axis=1),
                       axis=0)
         return Node(res, 'log_loss', self, true)
 
@@ -242,12 +233,10 @@ class Node:
             true = Node(true)
 
         x_ = self.val
+        norms = np.exp(x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
 
-        exp_x = np.exp(self.val)
-        s = np.sum(exp_x, axis=1, keepdims=True)
-        logits = np.exp(x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
-
-        res = np.sum(np.sum(-(true.val * np.log(logits)), axis=1), axis=0)
+        res = -np.sum(np.sum((true.val * np.log(norms)), axis=1), axis=0)
+        
         return Node(res, 'crossentropy_loss', self, true)
 
     @property

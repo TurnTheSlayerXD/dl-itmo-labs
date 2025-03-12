@@ -54,7 +54,6 @@ class SoftargmaxLayer(nnLayer):
     def forward(self, x_: Node) -> Node:
         return x_.softargmax()
 
-
 class LinearLayer(nnLayer):
 
     def __init__(self, in_dim: int, out_dim: int, with_bias: bool,

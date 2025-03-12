@@ -2,14 +2,12 @@ import numpy as np
 
 from nn_layer import *
 
-from nn_impl import nnImpl
 
 
 def nnfix(arr: np.ndarray):
     isnan = np.isnan(arr)
     isinf = np.isinf(arr)
     isneginf = np.isneginf(arr)
-<<<<<<< HEAD
     
     arr[np.abs(arr) < 10 ** -5] = np.random.rand() * 10 **-3
     arr[arr > 10 ** 6] =  np.random.rand() * 10 ** 6
@@ -19,7 +17,6 @@ def nnfix(arr: np.ndarray):
     arr[isinf] = 10 ** 6 * np.random.rand()
     arr[isneginf] = -10 ** 6 * np.random.rand()
     
-=======
 
     arr[np.abs(arr) < 10 ** -5] = 0
     arr[arr > 10 ** 6] = 10 ** 6
@@ -28,7 +25,6 @@ def nnfix(arr: np.ndarray):
     arr[isnan] = 0
     arr[isinf] = 10 ** 6
     arr[isneginf] = -10 ** 6
->>>>>>> 911aa5a40cbcf1a3d761eab47d80bb8a45dfbfd3
 
 
 class nnLoss(ABC):
@@ -64,11 +60,25 @@ class LogLoss(nnLoss):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def backward(self, predicted: Node, true) -> Node:
-        self.loss_ = predicted.log_loss(Node(true))
+    def backward(self, predicted: Node, true : Node) -> Node:
+        self.loss_ = predicted.log_loss(true)
         self.loss_.backward(np.ones(self.loss_.shape))
         return self.loss_
 
-    def count_loss(self, predicted: Node, true) -> Node:
+    def count_loss(self, predicted: Node, true : Node) -> Node:
         self.loss_ = predicted.log_loss(true)
+        return self.loss_
+
+class CrossEntropyLoss(nnLoss):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def backward(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.crossentropy_loss(true)
+        self.loss_.backward(np.ones(self.loss_.shape))
+        return self.loss_
+
+    def count_loss(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.crossentropy_loss(true)
         return self.loss_

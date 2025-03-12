@@ -7,51 +7,43 @@ import nn_loss
 
 
 from nn_layer import *
-from nn_impl import nnImpl
 
 from nn_loss import LogLoss, MinsqrLoss
 
 import nn_optimizer as opt
 
 
+
+from nn_layer import nnLayer
+import numpy as np
+
+from nn_loss import *
+
+
+class nnImpl:
+
+    def __init__(self, in_dim, out_dim):
+
+        self.with_bias = True
+        self.layers: np.ndarray[nnLayer] =         [   
+                                LinearLayer(in_dim, 4, with_bias=self.with_bias, kernel=Node.dot),
+            ReluLayer(),
+            LinearLayer(4, out_dim, with_bias=self.with_bias, kernel=Node.dot),
+            SoftargmaxLayer()]
+
+    def forward(self, x_: Node) -> Node:
+        for layer in self.layers:
+            x_ = layer.forward(x_)
+        return x_
+
+
+
 def test():
-<<<<<<< HEAD
-    
-    np.seterr(all='warn')
-    
-    layers = [ 
-              SigmoidLayer(3, 3, kernel=nn_kernel.GausKernel(q=1)),
-                LinearLayer(3, 5, kernel=nn_kernel.GausKernel(q=1)),
-                SigmoidLayer(5, 3, kernel=nn_kernel.GausKernel(q=1)),
-                LinearLayer(3, 5, kernel=nn_kernel.GausKernel(q=1)),
-                SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.GausKernel(q=1))]
-    
-    layers = [ 
-              SigmoidLayer(3, 1, kernel=nn_kernel.LinearKernel()),
-                LinearLayer(1, 1, kernel=nn_kernel.LinearKernel()),
-              SigmoidLayer(1, 2, kernel=nn_kernel.LinearKernel()),
-                SoftArgMaxCrossEntropy(2, 3, kernel=nn_kernel.LinearKernel())]
-    
-    net = nnImpl(layers, epochs=10 * 10 ** 4, speed=10 ** -5)
-    
-    l = 10000
-    # ev = [ [n] for n in range(2, l, 2)]
-    # y_ev = [[1, 0]] * len(ev)
-    
-    # odd = [ [n] for n in range(1, l, 2)]
-    # y_odd = [[0, 1]] * len(odd)
-    
-    # x_ = ev + odd
-    # y_ = y_ev + y_odd
-    
-    from numpy.random import randint
-=======
 
     np.seterr(all='raise')
 
     n = 10000
 
->>>>>>> 911aa5a40cbcf1a3d761eab47d80bb8a45dfbfd3
     from numpy.random import rand
 
     x_ = np.array([[rand(), rand(), rand()] for _ in range(n)])

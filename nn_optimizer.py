@@ -2,7 +2,6 @@
 from abc import abstractmethod, ABC
 
 
-import nn_impl
 
 import numpy as np
 
@@ -11,7 +10,7 @@ from nn_layer import LinearLayer
 
 class Optim(ABC):
 
-    def __init__(self, net: nn_impl.nnImpl):
+    def __init__(self, net):
         super().__init__()
         self.with_bias = net.with_bias
 
@@ -31,7 +30,7 @@ class Optim(ABC):
 
 
 class StochasticOptim(Optim):
-    def __init__(self, net: nn_impl.nnImpl, lr: float):
+    def __init__(self, net, lr: float):
         super().__init__(net)
         self.lr = lr
 
@@ -50,7 +49,7 @@ class StochasticOptim(Optim):
 
 
 class AdamOptim(Optim):
-    def __init__(self, net: nn_impl.nnImpl, lr: float):
+    def __init__(self, net, lr: float):
         super().__init__(net)
         self.lr = lr
 
