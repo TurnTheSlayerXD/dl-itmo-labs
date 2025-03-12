@@ -2,11 +2,9 @@
 import numpy as np
 
 
-
-
 class Node:
 
-    q = 0.6
+    q = 0.1
     q_dot = -1 / (2 * q ** 2)
     q_prime = 1 / q ** 2
 
@@ -16,7 +14,7 @@ class Node:
                  lhs: 'Node' = None,
                  rhs: 'Node' = None):
 
-        self.val = val
+        self.val = np.array(val)
         self.op_name = op_name
         self.lhs = lhs
         self.rhs = rhs
@@ -124,8 +122,20 @@ class Node:
 
             self.lhs.backward(grad * rhs / lhs)
             self.rhs.backward(grad / (np.log(lhs) + self.EPS))
-            
-        
+
+        elif self.op_name == 'cross_entropy_loss':
+
+            x_ = self.lhs.val
+            y_ = self.rhs.val
+
+            exp_x = np.exp(x_)
+            sums = np.sum(exp_x, axis=1, keepdims=True)
+            s_ = exp_x / sums
+
+            self.lhs.backward((s_ - y_) * grad)
+            self.rhs.backward(np.log(s_) * grad)
+
+            return
 
     def __add__(self, rhs) -> 'Node':
         if not isinstance(rhs, Node):
@@ -195,10 +205,9 @@ class Node:
         return Node(res, 'relu', self)
 
     def softargmax(self) -> 'Node':
-        exp_x = np.exp(self.val)
-        s = np.sum(exp_x, axis=1, keepdims=True)
-        res = exp_x / s
-        return Node(res, 'softargmax', self)
+        x_ = self.val
+        logits =  np.exp(x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
+        return Node(logits, 'softargmax', self)
 
     def gauss(self, rhs) -> 'Node':
         if not isinstance(rhs, Node):
@@ -228,6 +237,20 @@ class Node:
         res = np.sum(np.sum(np.square(self.val - true.val), axis=1),
                      axis=0)
         return Node(res, 'minsqr_loss', self, true)
+
+    def cross_entropy_loss(self, true) -> 'Node':
+        if not isinstance(true, Node):
+            true = Node(true)
+
+        x_ = self.val
+
+        exp_x = np.exp(self.val)
+        s = np.sum(exp_x, axis=1, keepdims=True)
+        logits =  np.exp(x_ - np.log(np.sum(np.exp(x_), axis=1, keepdims=True)))
+
+
+        res = np.sum(np.sum(-(true.val * np.log(logits)), axis=1), axis=0)
+        return Node(res, 'cross_entropy_loss', self, true)
 
     @property
     def T(self) -> 'Node':
