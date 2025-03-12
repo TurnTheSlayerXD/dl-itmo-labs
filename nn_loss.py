@@ -1,10 +1,15 @@
 import numpy as np
 
+from nn_layer import *
+
+from nn_impl import nnImpl
+
 
 def nnfix(arr: np.ndarray):
     isnan = np.isnan(arr)
     isinf = np.isinf(arr)
     isneginf = np.isneginf(arr)
+<<<<<<< HEAD
     
     arr[np.abs(arr) < 10 ** -5] = np.random.rand() * 10 **-3
     arr[arr > 10 ** 6] =  np.random.rand() * 10 ** 6
@@ -14,44 +19,56 @@ def nnfix(arr: np.ndarray):
     arr[isinf] = 10 ** 6 * np.random.rand()
     arr[isneginf] = -10 ** 6 * np.random.rand()
     
+=======
 
-class MinsqrLoss:
+    arr[np.abs(arr) < 10 ** -5] = 0
+    arr[arr > 10 ** 6] = 10 ** 6
+    arr[arr < -10 ** 6] = -10 ** 6
 
+    arr[isnan] = 0
+    arr[isinf] = 10 ** 6
+    arr[isneginf] = -10 ** 6
+>>>>>>> 911aa5a40cbcf1a3d761eab47d80bb8a45dfbfd3
+
+
+class nnLoss(ABC):
     def __init__(self):
+        self.loss_: Node = None
 
-        def minsqr_loss_value(pred, true) -> np.float64:
-            return  np.sum(np.abs(pred - true) ** 2) / len(pred)
+    @abstractmethod
+    def backward(self) -> float:
+        raise NotImplemented
 
-        def minsqr_loss_prime(pred, true) -> np.ndarray:
-            res = 2 * (pred - true)
-            return res
-            
-        self.loss_val = minsqr_loss_value
-        self.loss_prime = minsqr_loss_prime
-        
-        
-class LogLoss:
+    @abstractmethod
+    def count_loss(self, predicted: Node, true: Node) -> Node:
+        raise NotImplemented
 
-    def __init__(self):
 
-        def log_loss_value(pred: np.ndarray, exp: np.ndarray) -> np.float64:
-            EPS = 10 ** -10
+class MinsqrLoss(nnLoss):
 
-            ones = np.ones(shape=pred.shape)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-            res = -(exp * np.log2(pred + EPS) + (ones - exp) * np.log2(ones - pred + EPS))
+    def backward(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.minsqr_loss(true)
+        self.loss_.backward(np.ones(self.loss_.shape))
+        return self.loss_
 
-            # res = -(exp * np.log2(pred + EPS))
-            s = np.sum(res) / len(pred)
-            
-            return s
+    def count_loss(self, predicted: Node, true: Node) -> Node:
+        self.loss_ = predicted.minsqr_loss(true)
+        return self.loss_
 
-        def log_loss_prime(pred: np.ndarray, exp: np.ndarray) -> np.ndarray:
-            EPS = 10 ** -10
-            ones = np.ones(shape=pred.shape)
-            res = (pred - exp) / ((pred + EPS) * (ones - pred + EPS))
-            return res
 
-        self.loss_val = log_loss_value
-        self.loss_prime = log_loss_prime
-        
+class LogLoss(nnLoss):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def backward(self, predicted: Node, true) -> Node:
+        self.loss_ = predicted.log_loss(Node(true))
+        self.loss_.backward(np.ones(self.loss_.shape))
+        return self.loss_
+
+    def count_loss(self, predicted: Node, true) -> Node:
+        self.loss_ = predicted.log_loss(true)
+        return self.loss_

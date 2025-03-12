@@ -1,15 +1,21 @@
+import torch.autograd as grad
+import torch
+import torch.nn as nn
 import numpy as np
 
 import nn_loss
 
-import nn_kernel
 
 from nn_layer import *
 from nn_impl import nnImpl
 
+from nn_loss import LogLoss, MinsqrLoss
 
-# proof of work
+import nn_optimizer as opt
+
+
 def test():
+<<<<<<< HEAD
     
     np.seterr(all='warn')
     
@@ -39,38 +45,44 @@ def test():
     # y_ = y_ev + y_odd
     
     from numpy.random import randint
+=======
+
+    np.seterr(all='raise')
+
+    n = 10000
+
+>>>>>>> 911aa5a40cbcf1a3d761eab47d80bb8a45dfbfd3
     from numpy.random import rand
-    x_ = np.array([[rand(), rand(), rand() ] 
-                   for _ in range(l)])
-    
-    y_ = np.array([[1, 0, 0] if x[2] < 0.33 else [0, 1, 0] if x[2] < 0.66 else [0, 0, 1]
-                   for x in x_])
 
-    net.fit(x_, y_)
-    
-    res = net.predict(np.array([[0.1, 0.2, 0.3]]))
+    x_ = np.array([[rand(), rand(), rand()] for _ in range(n)])
 
-    best = res.argmax(axis=1)
+    true = np.array([[1, 0, 0] if x[2] < 0.33 else [0, 1, 0]
+                    if x[2] < 0.66 else [0, 0, 1] for x in x_])
+
+    net = nnImpl(3, 3)
+
+    indxs = list(range(0, n))
+    epochs = 10 ** 3 * 5
+
+    optim = opt.AdamOptim(net, lr=10**-4 * 5)
+    loss = LogLoss()
+
+    for epoch in range(0, epochs + 1):
+        pred = net.forward(Node(x_))
+
+        loss_ = loss.backward(pred, Node(true))
+
+        optim.descend()
+        if epoch % 10 ** 2 == 0:
+            print(f'epoch: {epoch} loss value: {loss_ / n}')
+            np.random.shuffle(indxs)
+            x_ = x_[indxs]
+            true = true[indxs]
+
+    res = net.forward(Node(np.array([[0.1, 0.2, 0.4]])))
+
+    best = res.val.argmax(axis=1)
     print(f'Prediction is {res}, best={best}')
-
-
-import torch.nn as nn
-import torch
-import torch.autograd as grad
-
-
-def test_torch():
-
-    x = torch.tensor([[1, 2, 3], [1, 2, 3]], requires_grad=True, dtype=torch.float64)
-
-    softmax = nn.Softmax(0)
-
-    y = softmax(x)
-    print(y)
-    res = grad.grad(y, x)
-
-    print(res)
-    pass
 
 
 if __name__ == '__main__':
