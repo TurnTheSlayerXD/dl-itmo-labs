@@ -21,13 +21,12 @@ def test():
                 SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.GausKernel(q=1))]
     
     layers = [ 
-              SigmoidLayer(3, 3, kernel=nn_kernel.LinearKernel()),
-                LinearLayer(3, 5, kernel=nn_kernel.LinearKernel()),
-                SigmoidLayer(5, 3, kernel=nn_kernel.LinearKernel()),
-                LinearLayer(3, 5, kernel=nn_kernel.LinearKernel()),
-                SoftArgMaxCrossEntropy(5, 3, kernel=nn_kernel.LinearKernel())]
+              SigmoidLayer(3, 1, kernel=nn_kernel.LinearKernel()),
+                LinearLayer(1, 1, kernel=nn_kernel.LinearKernel()),
+              SigmoidLayer(1, 2, kernel=nn_kernel.LinearKernel()),
+                SoftArgMaxCrossEntropy(2, 3, kernel=nn_kernel.LinearKernel())]
     
-    net = nnImpl(layers, epochs=10 ** 4, speed=10 ** -4)
+    net = nnImpl(layers, epochs=10 * 10 ** 4, speed=10 ** -5)
     
     l = 10000
     # ev = [ [n] for n in range(2, l, 2)]

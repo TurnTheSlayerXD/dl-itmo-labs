@@ -6,13 +6,13 @@ def nnfix(arr: np.ndarray):
     isinf = np.isinf(arr)
     isneginf = np.isneginf(arr)
     
-    arr[np.abs(arr) < 10 ** -5] = 0
-    arr[arr > 10 ** 6] = 10 ** 6
-    arr[arr < -10 ** 6] = -10 ** 6
+    arr[np.abs(arr) < 10 ** -5] = np.random.rand() * 10 **-3
+    arr[arr > 10 ** 6] =  np.random.rand() * 10 ** 6
+    arr[arr < -10 ** 6] = np.random.rand() * -10 ** 6
     
-    arr[isnan] = 0
-    arr[isinf] = 10 ** 6
-    arr[isneginf] = -10 ** 6
+    arr[isnan] = np.random.rand() * 10 ** -3
+    arr[isinf] = 10 ** 6 * np.random.rand()
+    arr[isneginf] = -10 ** 6 * np.random.rand()
     
 
 class MinsqrLoss:
